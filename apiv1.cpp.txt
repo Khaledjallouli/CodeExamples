@@ -1,0 +1,146 @@
+#include "apiv1.h"
+
+#include "webserverapplication.h"
+#include "serverrest.h"
+#include "src/controllermodel.h"
+
+#include "TUConfig.h"
+#include "ToolConfig.h"
+
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QDebug>
+#include <QThread>
+
+
+ApiV1::ApiV1(QObject *parent)
+    : Api (parent)
+{
+}
+
+//------------------------------------------------------
+ApiV1::~ApiV1()
+{
+}
+
+//------------------------------------------------------
+void ApiV1::tighteningUnits(Cutelyst::Context *c)
+{
+    qDebug() << Q_FUNC_INFO;
+}
+
+//------------------------------------------------------
+// GET The list of tightening Units in JSON Format
+void ApiV1::tighteningUnits_GET(Cutelyst::Context *c)
+{
+    qDebug() << Q_FUNC_INFO;
+    qDebug() << QThread::currentThread();
+
+    QJsonArray jaTUList;
+
+    foreach (TUConfig *pTUConfig, getApp()->getControllerModel()->getTUList().values())
+    {
+        QJsonObject joTU = serializeObject(pTUConfig);
+        jaTUList.append(joTU);
+    }
+
+    QJsonObject joTUList;
+
+    joTUList["nbTighteningUnits"] = getApp()->getControllerModel()->getTUList().count();
+    joTUList["tighteningUnits"] = jaTUList;
+
+    qDebug() <<  joTUList;
+
+    c->response()->setJsonObjectBody(joTUList); // Send the json object to the frontend
+}
+
+//------------------------------------------------------
+void ApiV1::tighteningUnits_tuId(Cutelyst::Context *c, const QString &tuId)
+{
+    qDebug() << Q_FUNC_INFO;
+}
+
+//------------------------------------------------------
+// GET a specific tightening Units in JSON Format
+void ApiV1::tighteningUnits_tuId_GET(Cutelyst::Context *c, const QString &tuId)
+{
+    qDebug() << Q_FUNC_INFO;
+
+    const QMap<int, TUConfig*>& mapTu = getApp()->getControllerModel()->getTUList();
+
+    int iTuId = tuId.toInt();
+
+    TUConfig *pTuConfig = mapTu[iTuId];
+
+    QJsonObject joTU = serializeObject(pTuConfig);
+
+    c->response()->setJsonObjectBody(joTU); 
+}
+
+//------------------------------------------------------
+// Serialize the tightening Unit attributes
+QJsonObject ApiV1::serializeObject(TUConfig *pTuConfig)
+{
+    QJsonObject joTU;
+
+    if (NULL != pTuConfig)
+    {
+        joTU["uiTUId"] = static_cast<int>(pTuConfig->getUiTUId());
+        joTU["sName"] = QString::fromUtf8(pTuConfig->getSName());
+        joTU["sComment"] = QString::fromUtf8(pTuConfig->getSComment());
+        joTU["tTypeTU"] = pTuConfig->getTTypeTU();
+
+        QJsonObject joTUConfigSpecific;
+
+        joTUConfigSpecific["tTypeTUjk"]= pTuConfig->getItsTUConfigSpecific()->getTTypeTU();
+        joTUConfigSpecific["bCurveEnabled"]= pTuConfig->getItsTUConfigSpecific()->getBCurveEnabled();
+
+        joTU["itsTUConfigSpecific"] = joTUConfigSpecific;
+
+        OMIterator<ToolConfig*> iterTool = pTuConfig->getItsToolConfig();
+
+        QJsonArray jaToolList;
+
+        while (*iterTool) // Iterate the tools associated to the Tightening Unit
+        {
+            ToolConfig *pToolConfig;
+
+            pToolConfig = iterTool.value();
+
+            QJsonObject joItsToolConfig = serializeTool(pToolConfig);
+
+            jaToolList.append(joItsToolConfig);
+
+            iterTool++;
+        }
+
+        joTU["itsToolConfig"] = jaToolList;
+    }
+
+    else
+    {
+        qCritical() << Q_FUNC_INFO << QString(": pTUConfig is null.");
+    }
+
+    return joTU;
+}
+
+//------------------------------------------------------
+//// Serialize the tool attributes
+QJsonObject ApiV1::serializeTool(ToolConfig *pToolConfig)
+{
+    QJsonObject joItsToolConfig;
+
+    if (NULL != pToolConfig)
+    {
+        joItsToolConfig["uiToolId"]= static_cast<int>(pToolConfig->getUiToolId());
+        joItsToolConfig["tTypeTool"]= pToolConfig->getTTypeTool();
+        joItsToolConfig["tTriggerConfig"]= pToolConfig->getTTriggerConfig();
+        joItsToolConfig["tEnableVibrationOnNok"]= pToolConfig->getTEnableVibrationOnNok();
+        joItsToolConfig["tEnableFrontLight"]= pToolConfig->getTEnableFrontLight();
+    }
+
+    return joItsToolConfig;
+}
+
+

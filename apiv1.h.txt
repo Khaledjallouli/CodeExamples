@@ -1,0 +1,36 @@
+#ifndef APIV1_H
+#define APIV1_H
+
+#include "api.h"
+
+class TUConfig;
+class ToolConfig;
+
+class ApiV1 : public Api
+{
+    Q_OBJECT
+
+public:
+    ApiV1(QObject *parent = 0);
+    virtual ~ApiV1() override;
+
+    //Collection of Tightening unit
+    C_ATTR(tighteningUnits, :Local :AutoArgs :ActionClass(REST))
+    virtual void tighteningUnits(Cutelyst::Context *c) override;
+
+    C_ATTR(tighteningUnits_GET, :Private)
+    virtual void tighteningUnits_GET(Cutelyst::Context *c) override;
+
+    //Single Tightening unit
+    C_ATTR(tighteningUnits_tuId, :Path('tighteningUnits') :AutoArgs :ActionClass(REST))
+    virtual void tighteningUnits_tuId(Cutelyst::Context *c, const QString &tuId) override;
+
+    C_ATTR(tighteningUnits_GET, :Private)
+    virtual void tighteningUnits_tuId_GET(Cutelyst::Context *c, const QString &tuId) override;
+
+protected:
+    static QJsonObject serializeObject(TUConfig *pTuConfig);
+    static QJsonObject serializeTool(ToolConfig *pToolConfig);
+};
+
+#endif // APIV1_H
